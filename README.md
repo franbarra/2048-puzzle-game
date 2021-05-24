@@ -6,7 +6,7 @@ This is a popular game called "2048"
 
 
 
-#License
+License
 
 Copyright © 2021 <copyright holders>
 
