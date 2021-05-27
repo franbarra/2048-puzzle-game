@@ -14,7 +14,7 @@
  */
 
 #include <stdlib.h>
-#include <time.h>
+//#include <time.h>
 #include <ncurses.h>
 
 #include "game.h"
@@ -30,12 +30,15 @@
 
 int (*game_board)[MATRIX_COLS];
 
+// use this to implement an undo function
+// int (*previous_game_board)[MATRIX_COLS];
+
 int main() {
 
     // we seed the random number generator
-    srand(404);
+    srand(0.560123);
 
-    int ch;
+    //int ch;
     //initscr();
     //raw();
     //noecho();
@@ -44,32 +47,28 @@ int main() {
 
     // the scoreboard has to be a square matrix (n x n), otherwise malloc panics
     game_board = malloc(sizeof(*game_board) * MATRIX_ROWS);
+    // previous_game_board = malloc(sizeof(*game_board) * MATRIX_ROWS);
 
     game_board_spawn_new_values_random(*game_board, MATRIX_COLS, MATRIX_ROWS);
 
-    printf("value of game_board[0][0]: %d\n", game_board[0][0]);
-    printf("value of game_board[0][1]: %d\n", game_board[0][1]);
-    printf("value of game_board[0][2]: %d\n", game_board[0][2]);
-    printf("value of game_board[0][3]: %d\n", game_board[0][3]);
-    printf("value of game_board[1][0]: %d\n", game_board[1][0]);
-    printf("value of game_board[1][1]: %d\n", game_board[1][1]);
-    printf("value of game_board[1][2]: %d\n", game_board[1][2]);
-    printf("value of game_board[1][3]: %d\n", game_board[1][3]);
-    printf("value of game_board[2][0]: %d\n", game_board[2][0]);
-    printf("value of game_board[2][1]: %d\n", game_board[2][1]);
-    printf("value of game_board[2][2]: %d\n", game_board[2][2]);
-    printf("value of game_board[2][3]: %d\n", game_board[2][3]);
-    printf("value of game_board[3][0]: %d\n", game_board[3][0]);
-    printf("value of game_board[3][1]: %d\n", game_board[3][1]);
-    printf("value of game_board[3][2]: %d\n", game_board[3][2]);
-    printf("value of game_board[3][3]: %d\n", game_board[3][3]);
+    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
 
+    game_board_tiles_move_direction(KEY_UP, *game_board, MATRIX_COLS, MATRIX_ROWS);
+    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
+
+    game_board_tiles_move_direction(KEY_DOWN, *game_board, MATRIX_COLS, MATRIX_ROWS);
+    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
+
+    game_board_tiles_move_direction(KEY_LEFT, *game_board, MATRIX_COLS, MATRIX_ROWS);
+    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
+
+    game_board_tiles_move_direction(KEY_RIGHT, *game_board, MATRIX_COLS, MATRIX_ROWS);
     game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
 
     //ch = getch();
 
-    game_board_update(KEY_UP, *game_board, MATRIX_COLS, MATRIX_ROWS);
-    game_board_update(KEY_DOWN, *game_board, MATRIX_COLS, MATRIX_ROWS);
+    //game_board_update(KEY_UP, *game_board, MATRIX_COLS, MATRIX_ROWS);
+    //game_board_update(KEY_DOWN, *game_board, MATRIX_COLS, MATRIX_ROWS);
     //refresh();
 
     // game_board_print(*game_board, COLS, ROWS);
@@ -82,53 +81,19 @@ int main() {
     return 0;
 }
 
+
+// TODO: copy the game_board into previous_game_board before updating game_board
 void game_board_update(int direction, int *arr, uint8_t columns, uint8_t rows) {
 
 
-    int z = 0; // counter for the recursive function. we want to step forward 4 positions at a time
-
     if (direction == KEY_UP) {
 
-        z = 0;
 
-        // first we move all values towards 'direction'.
-        for (size_t i = 0; i < columns; i++) {
-            printf("z: %d, \"for\" line: %d\n", z, __LINE__);
-            game_board_recursive_move_values(direction, z, arr, columns, rows);
-            game_board_print(arr, columns, rows);
-            z++;
-        }
-
-        z = 0; // reset the counter
-        // then we recursively sum all pairs of values
-        for (size_t i = 0; i < columns; i++) {
-            printf("z: %d, \"for\" line: %d\n", z, __LINE__);
-            game_board_recursive_add_pairs(direction, z, arr, columns, rows);
-            game_board_print(arr, columns, rows);
-            z++;
-        }
     }
 
     else if (direction == KEY_DOWN) {
 
-        // we start from the bottom-right corner
-        z = 15;
 
-        // we move values downwards
-        for (size_t i = 0; i < columns; i++) {
-            printf("z: %d, \"for\" line: %d\n", z, __LINE__);
-            game_board_recursive_move_values(direction, z, arr, columns, rows);
-            game_board_print(arr, columns, rows);
-            z--;
-        }
-
-        z = 15;
-        for (size_t i = 0; i < columns; i++) {
-            printf("z: %d, \"for\" line: %d\n", z, __LINE__);
-            game_board_recursive_add_pairs(direction, z, arr, columns, rows);
-            game_board_print(arr, columns, rows);
-            z--;
-        }
     }
 
     else if (direction == KEY_LEFT) {
@@ -140,76 +105,141 @@ void game_board_update(int direction, int *arr, uint8_t columns, uint8_t rows) {
     }
 
     else {
+
         printf("character not recognized: %d\n", direction);
+        // we want to return early in case of an error
+        return;
     }
 
     game_board_spawn_new_values_random(*game_board, columns, rows);
     game_board_print(*game_board, columns, rows);
 }
 
-// TODO: implement DOWN, LEFT and RIGHT directions
-// FIXME: DOWN direction, which doesn't update correctly if there are 2 zeroes consecutively in a column
-void game_board_recursive_move_values(int direction, int counter, int *arr, uint8_t columns, uint8_t rows) {
 
-    printf("moving all values\n");
+void game_board_tiles_move_direction(int direction, int *arr, uint8_t columns, uint8_t rows) {
+
+    printf("moving all tiles\n");
 
     if (direction == KEY_UP) {
 
-        int k = counter; // we need to store the value passed onto the function
-        printf("k: %d, counter: %d\n", k, counter);
+        // we move tiles upwards, so we step through the rows 1 at a time
+        for (uint8_t i = 0; i < rows; i++) {
+            // to move one column at a time, we step 4 values since we have a 4x4 array
+            for (uint8_t j = i; j < columns * rows; j += columns) {
 
-        if (k >= columns * rows) {
-            printf("if where k >= cols * rows. k: %d\n", k);
-            return;
+                printf("value of i: %d, value of j: %d, arr[j]: %d\n", i, j, arr[j]);
+
+                if (arr[j] == 0) {
+
+                    for (uint8_t k = j + columns; k < columns * rows; k += columns) {
+                        // printf("k: %d\n", k);
+                        if (arr[k] != 0) {
+                            // printf("value of k: %d, value of i: %d, arr[k]: %d\n", k, i, arr[k]);
+                            arr[j] = arr[k];
+                            arr[k] = 0;
+                            break;
+
+                        }
+                    }
+                }
+            }
         }
-
-        else if (k + columns >= columns * rows) {
-            printf("if where k + columns >= cols * rows. k + columns: %d\n", k + columns);
-            return;
-        }
-
-        if (arr[k] == 0 && arr[k + columns] != 0) {
-
-            printf("first if where arr[k] == 0\n");
-            printf("moving arr[k + columns]: %d up to arr[k]: %d where k: %d\n", arr[k + columns], arr[k], k);
-            arr[k] = arr[k + columns];
-            arr[k + columns] = 0;
-        }
-
-        game_board_recursive_move_values(direction, counter + columns, arr, columns, rows);
     }
 
     else if (direction == KEY_DOWN) {
 
-        int k = counter;
-        printf("k: %d, counter: %d\n", k, counter);
+        // we step through the rows 1 at a time
+        for (int8_t i = rows - 1; i >= 0; i--) {
 
-        if (k < 0) {
-            printf("if where k < 0. k: %d\n", k);
-            return;
+            printf("i: %d\n", i);
+
+            // to move one column at a time, we step 4 values since we have a 4x4 array
+            // we start from the bottom-left corner of the array, because I find it easier to think about.
+            for (int8_t j = ((columns * rows) - i) - 1; j >= i; j -= columns) {
+                printf("j: %d\n", j);
+
+                printf("value of i: %d, value of j: %d, arr[j]: %d\n", i, j, arr[j]);
+
+                if (arr[j] == 0) {
+
+                    for (int8_t k = j - columns; k >= 0; k -= columns) {
+                        printf("k: %d\n", k);
+                        if (arr[k] != 0) {
+                            printf("value of j: %d, value of k: %d, arr[k]: %d\n", j, k, arr[k]);
+                            arr[j] = arr[k];
+                            arr[k] = 0;
+                            break;
+                        }
+                    }
+                }
+            }
         }
-
-        else if (k - columns < 0) {
-            printf("if where k - columns < 0. k - columns: %d\n", k - columns);
-            return;
-        }
-
-        if (arr[k] == 0 && arr[k - columns] != 0) {
-
-            printf("first if where arr[k] == 0\n");
-            printf("moving arr[k - columns]: %d down to arr[k]: %d where k: %d\n", arr[k - columns], arr[k], k);
-            arr[k] = arr[k - columns];
-            arr[k - columns] = 0;
-        }
-
-        game_board_recursive_move_values(direction, counter - columns, arr, columns, rows);
     }
 
     else if (direction == KEY_LEFT) {
 
+        // we step through the rows one at a time, so we step 4 values forward
+        for (int8_t i = 0; i <= ((columns * rows) - columns); i += columns) {
+            printf("i: %d\n", i);
+
+            for (int8_t j = 0; j < rows; j++) {
+
+                if (arr[i + j] == 0) {
+                    printf("i: %d, j: %d, arr[i + j]: %d\n", i, j, arr[i + j]);
+
+                    for (int8_t k = j + 1; k < rows; k++) {
+                        printf("k: %d\n", k);
+                        if (arr[i + k] != 0) {
+                            printf("value of i: %d, value of k: %d, arr[k]: %d\n", i, k, arr[i + k]);
+                            arr[i + j] = arr[i + k];
+                            arr[i + k] = 0;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    else if (direction == KEY_RIGHT) {
+
+        // we step through the rows one at a time, so we step 4 values forward, starting from the right
+        for (int8_t i = rows - 1; i < columns * rows; i += columns) {
+            printf("i: %d\n", i);
+
+            // we start from the right of the game board
+            for (int8_t j = 0; j < rows; j++) {
+
+                if (arr[i - j] == 0) {
+
+                    for (int8_t k = j + 1; k < rows; k++) {
+                        printf("k: %d\n", k);
+
+                        if (arr[i - k] != 0) {
+                            printf("value of i: %d, value of k: %d, arr[k]: %d\n", i, k, arr[i + k]);
+                            arr[i - j] = arr[i - k];
+                            arr[i - k] = 0;
+                            break;
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    else {
+
+        printf("character not recognized: %d\n", direction);
     }
 
 }
+
+// TODO: implement UP, DOWN, LEFT and RIGHT directions
+void game_board_tiles_add_pairs(int direction, int *arr, uint8_t columns, uint8_t rows) {
+
+}
+
 
 // TODO: implement DOWN, LEFT and RIGHT directions
 void game_board_recursive_add_pairs(int direction, int counter, int *arr, uint8_t columns, uint8_t rows) {
@@ -276,10 +306,9 @@ void game_board_print(int *arr, uint8_t columns, uint8_t rows) {
 
     // here, 2 for loops are needed to give the adequate print format for 4x4 matrix
     printf("\n+---+---+---+---+\n");
-    for (size_t i = 0; i < columns * rows; i += 4) {
+    for (uint8_t i = 0; i < columns * rows; i += 4) {
         printf("| ");
-        for (size_t j = 0; j < rows; j++) {
-            // if you just put i + j then arr[0][1] == arr[1][0] which is what you don't want
+        for (uint8_t j = 0; j < rows; j++) {
             printf("%d", arr[i + j]);
             printf(" | ");
         }
@@ -297,28 +326,32 @@ void game_board_spawn_new_values_random(int *arr, uint8_t columns, uint8_t rows)
         }
     }
 
-    // we spawn a quantity of new values between 2 and 4 depending on the tiles available.
-    for (size_t i = 0; i < available_tiles; i++) {
+    // printf("there are %d available tiles.\n", available_tiles);
 
+    // we spawn a quantity of new values between 2 and 4 depending on the tiles available.
+    for (size_t i = 0; i < (int)(available_tiles / 4); i++) {
+
+        // we generate a random number between 0 and 1
         double num_probability = (double) rand() / (double) RAND_MAX;
 
-        // we have a 50% chance of spawning a 0, 40% chance for a 2 and a 10% chance of spawning a 4
-        if (num_probability >= 0 && num_probability < 0.5) {
-            // we do nothing since we can't overwrite existing values and there's 50% chance for a 0.
-        }
+        // we have a 80% chance of spawning a 2, and 10% chance for a 4.
+        if (num_probability >= 0 && num_probability < 0.8) {
 
-        else if (num_probability >= 0.5 && num_probability < 0.9) {
+            // magic formula for generating random numbers between range
+            // number = (rand() % (upper - lower + 1)) + lower
+            uint8_t position_random = (rand() % (16 - 0 + 1)) + 0;
 
             // remember! we can't override existing values.
-            if (arr[i] == 0) {
-                arr[i] = 2;
+            if (arr[position_random] == 0) {
+                arr[position_random] = 2;
             }
         }
 
-        else {
+        else if (num_probability >= 0.8 && num_probability < 1) {
 
-            if (arr[i] == 0) {
-                arr[i] = 4;
+            uint8_t position_random = (rand() % (16 - 0 + 1)) + 0;
+            if (arr[position_random] == 0) {
+                arr[position_random] = 4;
             }
         }
     }
