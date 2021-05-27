@@ -14,6 +14,7 @@
  */
 
 #include <stdlib.h>
+#include <time.h>
 #include <ncurses.h>
 
 #include "game.h"
@@ -21,14 +22,18 @@
 #define MATRIX_COLS 4
 #define MATRIX_ROWS 4
 
-#define __KEY_UP 0;
-#define __KEY_DOWN 1;
-#define __KEY_LEFT 2;
-#define __KEY_RIGHT 3;
+#define __KEY_UP 0
+#define __KEY_DOWN 1
+#define __KEY_LEFT 2
+#define __KEY_RIGHT 3
+
 
 int (*game_board)[MATRIX_COLS];
 
 int main() {
+
+    // we seed the random number generator
+    srand(404);
 
     int ch;
     //initscr();
@@ -40,7 +45,7 @@ int main() {
     // the scoreboard has to be a square matrix (n x n), otherwise malloc panics
     game_board = malloc(sizeof(*game_board) * MATRIX_ROWS);
 
-    game_board_populate_random(*game_board, MATRIX_COLS, MATRIX_ROWS);
+    game_board_spawn_new_values_random(*game_board, MATRIX_COLS, MATRIX_ROWS);
 
     printf("value of game_board[0][0]: %d\n", game_board[0][0]);
     printf("value of game_board[0][1]: %d\n", game_board[0][1]);
@@ -137,6 +142,9 @@ void game_board_update(int direction, int *arr, uint8_t columns, uint8_t rows) {
     else {
         printf("character not recognized: %d\n", direction);
     }
+
+    game_board_spawn_new_values_random(*game_board, columns, rows);
+    game_board_print(*game_board, columns, rows);
 }
 
 // TODO: implement DOWN, LEFT and RIGHT directions
@@ -228,7 +236,7 @@ void game_board_recursive_add_pairs(int direction, int counter, int *arr, uint8_
 
             printf("second if where arr[k] == arr[k + cols]\n");
             printf("k: %d, cols: %d, arr[k] = %d and arr[k + cols] = %d\n", k, columns, arr[k], arr[k + columns]);
-            arr[k] += arr[k + columns];
+            arr[k] *= 2;
             arr[k + columns] = 0;
             // now we need to move the values again because of the new zeroes
             game_board_recursive_move_values(direction, counter + columns, arr, columns, rows);
@@ -253,7 +261,7 @@ void game_board_recursive_add_pairs(int direction, int counter, int *arr, uint8_
         if (arr[k] == arr[k - columns] && arr[k] != 0) {
             printf("if where arr[k] == arr[k - columns].");
             printf("k: %d, arr[k] = %d and arr[k - columns] = %d]\n", k, arr[k], arr[k - columns]);
-            arr[k] += arr[k - columns];
+            arr[k] *= 2;
             arr[k - columns] = 0;
             // now we move the values again
             game_board_recursive_move_values(direction, counter - columns, arr, columns, rows);
@@ -280,12 +288,39 @@ void game_board_print(int *arr, uint8_t columns, uint8_t rows) {
 
 }
 
-void game_board_populate_random(int *arr, uint8_t columns, uint8_t rows) {
+void game_board_spawn_new_values_random(int *arr, uint8_t columns, uint8_t rows) {
 
-    // since an array is contiguous in memory, we don't need 2 for loops
-    for (size_t j = 0; j < columns * rows; j++) {
-        // magic formula for generating random even numbers in range of [0, 2n]
-        // where (rand() % (n + 1)) * 2
-        arr[j] = (rand() % (2 + 1)) * 2;
+    uint8_t available_tiles = 0;
+    for (size_t i = 0; i < columns * rows; i++) {
+        if (arr[i] == 0) {
+            available_tiles += 1;
+        }
     }
+
+    // we spawn a quantity of new values between 2 and 4 depending on the tiles available.
+    for (size_t i = 0; i < available_tiles; i++) {
+
+        double num_probability = (double) rand() / (double) RAND_MAX;
+
+        // we have a 50% chance of spawning a 0, 40% chance for a 2 and a 10% chance of spawning a 4
+        if (num_probability >= 0 && num_probability < 0.5) {
+            // we do nothing since we can't overwrite existing values and there's 50% chance for a 0.
+        }
+
+        else if (num_probability >= 0.5 && num_probability < 0.9) {
+
+            // remember! we can't override existing values.
+            if (arr[i] == 0) {
+                arr[i] = 2;
+            }
+        }
+
+        else {
+
+            if (arr[i] == 0) {
+                arr[i] = 4;
+            }
+        }
+    }
+
 }
