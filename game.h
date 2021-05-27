@@ -21,7 +21,8 @@
 
 // engine functions
 void game_board_update(int direction, int *arr, uint8_t columns, uint8_t rows);
-void game_board_recursive_move_values(int direction, int counter, int *arr, uint8_t columns, uint8_t rows);
+void game_board_tiles_move_direction(int direction, int *arr, uint8_t columns, uint8_t rows);
+void game_board_tiles_add_pairs(int direction, int *arr, uint8_t columns, uint8_t rows);
 void game_board_recursive_add_pairs(int direction, int counter, int *arr, uint8_t columns, uint8_t rows);
 void game_board_spawn_new_values_random(int *arr, uint8_t columns, uint8_t rows);
 
