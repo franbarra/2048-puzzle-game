@@ -20,11 +20,12 @@
 #include <stdint.h>
 
 // engine functions
-void game_board_update(int direction, int *arr, uint8_t columns, uint8_t rows);
+void game_board_update(int direction, int *arr, int *prev_arr, uint8_t columns, uint8_t rows);
 void game_board_tiles_move_direction(int direction, int *arr, uint8_t columns, uint8_t rows);
 void game_board_tiles_add_pairs(int direction, int *arr, uint8_t columns, uint8_t rows);
-void game_board_recursive_add_pairs(int direction, int counter, int *arr, uint8_t columns, uint8_t rows);
 void game_board_spawn_new_values_random(int *arr, uint8_t columns, uint8_t rows);
+
+void game_board_decision_undo(int *arr, int *prev_arr, uint8_t columns, uint8_t rows);
 
 // gui functions
 void game_board_print(int *arr, uint8_t columns, uint8_t rows);
