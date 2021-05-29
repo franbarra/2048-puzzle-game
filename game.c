@@ -51,6 +51,13 @@ int main() {
     game_board = malloc(sizeof(*game_board) * MATRIX_ROWS);
     previous_game_board = malloc(sizeof(*previous_game_board) * MATRIX_ROWS);
 
+    // zero the board
+    for (uint8_t i = 0; i < MATRIX_ROWS; i++) {
+        for (uint8_t j = 0; j < MATRIX_COLS; j++) {
+            game_board[i][j] = 0;
+        }
+    }
+
     game_board_spawn_new_values_random(*game_board, MATRIX_COLS, MATRIX_ROWS);
 
     game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
@@ -75,6 +82,7 @@ int main() {
     //getch();
     //endwin();
     //
+    free(previous_game_board);
     free(game_board);
 
     return 0;
@@ -237,9 +245,9 @@ void game_board_tiles_add_pairs(int direction, int *arr, uint8_t columns, uint8_
     else if (direction == KEY_DOWN) {
 
         // we add tiles downwards, so we step through the rows 1 at a time
-        for (int8_t i = rows - 1; i > 0; i--) {
+        for (int8_t i = rows - 1; i >= 0; i--) {
             // to move one column at a time, we step 4 values since we have a 4x4 array
-            for (int8_t j = ((columns * rows) - i); j < columns * rows; j -= columns) {
+            for (int8_t j = ((columns * rows) - i) - 1; j >= i; j -= columns) {
 
                 if (arr[j] != 0 && arr[j] == arr[j - columns]) {
                     arr[j] *= 2;
@@ -350,7 +358,7 @@ void game_board_spawn_new_values_random(int *arr, uint8_t columns, uint8_t rows)
 }
 
 
-static void game_board_decision_undo(int *arr, int *prev_arr, uint8_t columns, uint8_t rows) {
+void game_board_decision_undo(int *arr, int *prev_arr, uint8_t columns, uint8_t rows) {
 
     memmove(arr, prev_arr, (columns * rows));
 }
