@@ -20,32 +20,27 @@
 
 #include "game.h"
 
+
 #define MATRIX_COLS 4
 #define MATRIX_ROWS 4
-
-#define __KEY_UP 0
-#define __KEY_DOWN 1
-#define __KEY_LEFT 2
-#define __KEY_RIGHT 3
-
 
 int (*game_board)[MATRIX_COLS];
 int (*previous_game_board)[MATRIX_COLS]; // use this to implement an undo function
 
 uint32_t game_score = 0;
 uint16_t game_board_tile_highest = 0;
+uint8_t game_over = 0;
 
 int main() {
 
     // we seed the random number generator
     srand(0.560123);
 
-    //int ch;
-    //initscr();
-    //raw();
-    //noecho();
-    //cbreak();
-
+    initscr();
+    raw();
+    noecho();
+    cbreak();
+    keypad(stdscr, TRUE);
 
     // the scoreboard has to be a square matrix (n x n), otherwise malloc panics
     game_board = malloc(sizeof(*game_board) * MATRIX_ROWS);
@@ -60,28 +55,19 @@ int main() {
 
     game_board_spawn_new_values_random(*game_board, MATRIX_COLS, MATRIX_ROWS);
 
-    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
+    while (game_over == 0) {
 
-    game_board_update(KEY_UP, *game_board, *previous_game_board, MATRIX_COLS, MATRIX_ROWS);
-    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
-
-    game_board_update(KEY_DOWN, *game_board, *previous_game_board, MATRIX_COLS, MATRIX_ROWS);
-    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
-
-    game_board_update(KEY_LEFT, *game_board, *previous_game_board, MATRIX_COLS, MATRIX_ROWS);
-    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
-
-    game_board_update(KEY_RIGHT, *game_board, *previous_game_board, MATRIX_COLS, MATRIX_ROWS);
-    game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
-    //ch = getch();
+        game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
+        int ch = getch();
+        game_board_update(ch, *game_board, *previous_game_board, MATRIX_COLS, MATRIX_ROWS);
+    }
 
     //refresh();
 
-    // game_board_print(*game_board, COLS, ROWS);
 
     //getch();
-    //endwin();
-    //
+    endwin();
+
     free(previous_game_board);
     free(game_board);
 
@@ -109,9 +95,9 @@ void game_board_update(int direction, int *arr, int *prev_arr, uint8_t columns, 
         memmove(prev_arr, arr, (columns * rows));
 
         game_board_tiles_move_direction(direction, arr, columns, rows);
-        game_board_print(arr, columns, rows);
+        game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
         game_board_tiles_add_pairs(direction, arr, columns, rows);
-        game_board_print(arr, columns, rows);
+        game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
         game_board_spawn_new_values_random(*game_board, columns, rows);
 
     }
@@ -313,7 +299,41 @@ void game_board_print(int *arr, uint8_t columns, uint8_t rows) {
         }
         printf("\n+---+---+---+---+\n");
     }
+}
 
+void game_board_draw(int *arr, uint8_t columns, uint8_t rows) {
+
+    // we move downwards through y
+    for (int y = 0; y <= columns + rows; y++) {
+
+        // if y is even, that means we should print the borders of the game board, otherwise
+        // we print | and leave the space for the tiles' values.
+        if ((y % 2) == 0) {
+
+            // moving rightwards through x
+            // the reason we have (cols * rows) + rows is because in order to have 4 tiles,
+            // we need to step 4 positions (through x) rightwards
+            for (int x = 0; x <= (columns * rows) + 3*rows; x += 7) {
+                mvprintw(y, x, "+");
+                // this is just a "filler" loop so we can print 4 dashes between the "+" signs
+                for (int k = x + 1; k <= ((columns * rows) + 3*rows) - x - 1; k++) {
+                    mvprintw(y, k, "-");
+                }
+            }
+
+        } else {
+
+            // we draw the "columns" of the game board when the y coordinate is odd.
+            for (int x = 0; x <= (columns * rows) + 3*rows; x += 7) {
+                mvprintw(y, x, "|");
+                for (int k = x; k <= (columns * rows) + 2*rows; k += 7) {
+                    mvprintw(y, k + 2, "%d", arr[(y % 3) + (x % 5)]);
+                }
+            }
+        }
+    }
+
+    refresh(); // this is necessary, part of ncurses library
 }
 
 void game_board_spawn_new_values_random(int *arr, uint8_t columns, uint8_t rows) {
