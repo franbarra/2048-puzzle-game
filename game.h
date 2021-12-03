@@ -27,7 +27,11 @@ void game_board_spawn_new_values_random(int *arr, uint8_t columns, uint8_t rows)
 
 void game_board_decision_undo(int *arr, int *prev_arr, uint8_t columns, uint8_t rows);
 
+// workaround function for capturing keys without ncurses library
+int user_input_capture(char character);
+
 // gui functions
 void game_board_print(int *arr, uint8_t columns, uint8_t rows);
+void game_board_draw(int *arr, uint8_t columns, uint8_t rows);
 
 #endif

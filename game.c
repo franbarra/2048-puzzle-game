@@ -15,8 +15,8 @@
 
 #include <stdlib.h>
 #include <string.h>
-//#include <time.h>
-#include <ncurses.h>
+// #include <time.h>
+// #include <ncurses.h>
 
 #include "game.h"
 
@@ -25,7 +25,12 @@
 #define MATRIX_ROWS 4
 
 int (*game_board)[MATRIX_COLS];
-int (*previous_game_board)[MATRIX_COLS]; // use this to implement an undo function
+int (*game_board_previous)[MATRIX_COLS]; // use this to implement an undo function
+
+// WINDOW *window_game_board;
+
+// TODO: implement movement with arrow keys
+enum movement_keys{KEY_UP=0, KEY_DOWN, KEY_LEFT, KEY_RIGHT};
 
 uint32_t game_score = 0;
 uint16_t game_board_tile_highest = 0;
@@ -35,16 +40,28 @@ int main() {
 
     // we seed the random number generator
     srand(0.560123);
+    printf("hello\n");
 
-    initscr();
+    /* initscr();
     raw();
     noecho();
     cbreak();
     keypad(stdscr, TRUE);
+    */
 
+    printf("hello2\n");
     // the scoreboard has to be a square matrix (n x n), otherwise malloc panics
     game_board = malloc(sizeof(*game_board) * MATRIX_ROWS);
-    previous_game_board = malloc(sizeof(*previous_game_board) * MATRIX_ROWS);
+    game_board_previous = malloc(sizeof(*game_board_previous) * MATRIX_ROWS);
+
+    /*
+    window_game_board = newwin(10, 10, (LINES - MATRIX_ROWS), (COLS - MATRIX_COLS));
+
+    box(window_game_board, 0, 0);
+    wborder(window_game_board, '|', '|', '-', '-', '+', '+', '+', '+');
+    wrefresh(window_game_board);
+    wrefresh(stdscr);
+    */
 
     // zero the board
     for (uint8_t i = 0; i < MATRIX_ROWS; i++) {
@@ -53,29 +70,33 @@ int main() {
         }
     }
 
+    // int ch;
+    char ch;
     game_board_spawn_new_values_random(*game_board, MATRIX_COLS, MATRIX_ROWS);
 
     while (game_over == 0) {
 
-        game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
-        int ch = getch();
-        game_board_update(ch, *game_board, *previous_game_board, MATRIX_COLS, MATRIX_ROWS);
+        // game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
+        game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
+        // int ch = getch();
+        scanf("%c", &ch);
+        printf("%d", ch);
+        int direction_entered = user_input_capture(ch);
+        printf("%d", direction_entered);
+        game_board_update(direction_entered, *game_board, *game_board_previous, MATRIX_COLS, MATRIX_ROWS);
     }
 
-    //refresh();
 
+    // endwin();
 
-    //getch();
-    endwin();
-
-    free(previous_game_board);
+    free(game_board_previous);
     free(game_board);
 
     return 0;
 }
 
 
-// TODO: copy the game_board into previous_game_board before updating game_board
+// TODO: copy the game_board into game_board_previous before updating game_board
 void game_board_update(int direction, int *arr, int *prev_arr, uint8_t columns, uint8_t rows) {
 
 
@@ -95,9 +116,11 @@ void game_board_update(int direction, int *arr, int *prev_arr, uint8_t columns, 
         memmove(prev_arr, arr, (columns * rows));
 
         game_board_tiles_move_direction(direction, arr, columns, rows);
-        game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
+        // game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
+        game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
         game_board_tiles_add_pairs(direction, arr, columns, rows);
-        game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
+        // game_board_draw(*game_board, MATRIX_COLS, MATRIX_ROWS);
+        game_board_print(*game_board, MATRIX_COLS, MATRIX_ROWS);
         game_board_spawn_new_values_random(*game_board, columns, rows);
 
     }
@@ -106,7 +129,7 @@ void game_board_update(int direction, int *arr, int *prev_arr, uint8_t columns, 
 
 void game_board_tiles_move_direction(int direction, int *arr, uint8_t columns, uint8_t rows) {
 
-    printf("moving all tiles\n");
+    // printf("moving all tiles\n");
 
     if (direction == KEY_UP) {
 
@@ -210,7 +233,7 @@ void game_board_tiles_move_direction(int direction, int *arr, uint8_t columns, u
 void game_board_tiles_add_pairs(int direction, int *arr, uint8_t columns, uint8_t rows) {
 
 
-    printf("adding pairs\n");
+    // printf("adding pairs\n");
 
     if (direction == KEY_UP) {
 
@@ -307,27 +330,46 @@ void game_board_draw(int *arr, uint8_t columns, uint8_t rows) {
     for (int y = 0; y <= columns + rows; y++) {
 
         // if y is even, that means we should print the borders of the game board, otherwise
-        // we print | and leave the space for the tiles' values.
+        // we print | and leave the space for the tile's value.
         if ((y % 2) == 0) {
 
-            // moving rightwards through x
-            // the reason we have (cols * rows) + rows is because in order to have 4 tiles,
-            // we need to step 4 positions (through x) rightwards
-            for (int x = 0; x <= (columns * rows) + 3*rows; x += 7) {
+            // moving rightwards through x:
+            // x moves rightwards 7 steps at a time since 6 (dashes) and 1 ('plus' sign) is the length of a square.
+            // 'x' has an upward limit of (columns * 7) since, as we move 7 steps at a time, we should
+            // have a number of squares equal to the columns.
+            for (int x = 0; x <= (columns * 7); x += 7) {
                 mvprintw(y, x, "+");
-                // this is just a "filler" loop so we can print 4 dashes between the "+" signs
-                for (int k = x + 1; k <= ((columns * rows) + 3*rows) - x - 1; k++) {
+                // this is just a "filler" loop so we can print dashes between the "+" signs
+                for (int k = x + 1; k <= (columns * 7) - x - 1; k++) {
                     mvprintw(y, k, "-");
                 }
             }
 
         } else {
 
+            int n = 0;
             // we draw the "columns" of the game board when the y coordinate is odd.
-            for (int x = 0; x <= (columns * rows) + 3*rows; x += 7) {
+            for (int x = 0; x <= (columns * 7); x += 7) {
                 mvprintw(y, x, "|");
-                for (int k = x; k <= (columns * rows) + 2*rows; k += 7) {
-                    mvprintw(y, k + 2, "%d", arr[(y % 3) + (x % 5)]);
+                // printf("the value of y is: %d\n", y);
+                for (int k = x; k <= (columns * 7) - x - 1; k += 7) {
+                    // we draw the values of the array inside the squares,
+                    // FIXME: the formulas to get the corresponding array positions aren't generic,
+                    // I had to do them by hand in order to get the positions right.
+                    // changing the formula depending on the column is another problem. A generic formula
+                    // should be found in order to avoid creating more for loops to iterate over the array.
+                    /*
+                    if (y == 1) {
+                        // mvprintw(y, k + 2, "%d", arr[(k - y) / 7]);
+                    }
+
+                    if (y == 3) {
+                        mvprintw(y, k + 2, "%d", arr[(y + 1) + (k / 7)]);
+                    }
+                    */
+
+                    mvprintw(y, k + 2, "%d", n);
+                n++;
                 }
             }
         }
@@ -381,4 +423,23 @@ void game_board_spawn_new_values_random(int *arr, uint8_t columns, uint8_t rows)
 void game_board_decision_undo(int *arr, int *prev_arr, uint8_t columns, uint8_t rows) {
 
     memmove(arr, prev_arr, (columns * rows));
+}
+
+// enum movement_keys user_input_capture(int ch) {
+int user_input_capture(char ch) {
+
+    // w, a, s, d and KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT
+    if (ch == 119) {
+        return 0;
+
+    } else if (ch == 115) {
+        return 1;
+
+    } else if (ch == 97) {
+        return 2;
+
+    } else if (ch == 100) {
+        return 3;
+
+    }
 }
